@@ -104,7 +104,7 @@ export default function GroupDetailScreen() {
     const d = toDate(e.date);
     if (filterYear && d.getFullYear() !== Number(filterYear)) return false;
     if (filterMonth !== '' && d.getMonth() !== Number(filterMonth)) return false;
-    if (filterPerson && e.paidBy !== filterPerson && !(e.splitAmong || []).includes(filterPerson)) return false;
+    if (filterPerson && e.paidBy !== filterPerson) return false;
     return true;
   });
 
@@ -266,65 +266,48 @@ export default function GroupDetailScreen() {
       {/* ── Tab: Storico ── */}
       {tab === 'storico' && (
         <div style={{ paddingBottom: '6rem' }}>
-          {/* Toolbar: toggle + filtri */}
-          <div style={{ padding: '0.75rem 1rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Toggle view */}
-            <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid var(--primary)', flexShrink: 0 }}>
+          {/* Toggle vista */}
+          <div style={{ padding: '0.75rem 1rem 0' }}>
+            <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid var(--primary)' }}>
               {[['categoria', 'Per categoria'], ['cronologico', 'Cronologico']].map(([v, label]) => (
-                <button
-                  key={v}
-                  onClick={() => setStoricoView(v)}
-                  style={{
-                    padding: '0.4rem 0.75rem',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    background: storicoView === v ? 'var(--primary)' : 'transparent',
-                    color: storicoView === v ? '#fff' : 'var(--primary)',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'background 0.15s',
-                  }}
-                >
-                  {label}
-                </button>
+                <button key={v} onClick={() => setStoricoView(v)} style={{
+                  flex: 1, padding: '0.45rem 0', fontSize: '0.8rem', fontWeight: 600,
+                  background: storicoView === v ? 'var(--primary)' : 'transparent',
+                  color: storicoView === v ? '#fff' : 'var(--primary)',
+                  border: 'none', cursor: 'pointer', transition: 'background 0.15s',
+                }}>{label}</button>
               ))}
             </div>
+          </div>
 
-            {/* Filtro mese */}
-            <select
-              value={filterMonth}
-              onChange={e => setFilterMonth(e.target.value)}
-              style={{ flex: 1, minWidth: 0, padding: '0.4rem 0.5rem', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '0.8rem', background: '#fff', color: 'var(--text)' }}
-            >
-              <option value="">Tutti i mesi</option>
-              {MESI.map((m, i) => (
-                <option key={i} value={i}>{m}</option>
-              ))}
-            </select>
-
-            {/* Filtro anno */}
-            <select
-              value={filterYear}
-              onChange={e => setFilterYear(e.target.value)}
-              style={{ flex: 0, padding: '0.4rem 0.5rem', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '0.8rem', background: '#fff', color: 'var(--text)' }}
-            >
-              <option value="">Tutti</option>
-              {availableYears.map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-
-            {/* Filtro persona */}
-            <select
-              value={filterPerson}
-              onChange={e => setFilterPerson(e.target.value)}
-              style={{ flex: 1, minWidth: 0, padding: '0.4rem 0.5rem', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '0.8rem', background: '#fff', color: 'var(--text)' }}
-            >
-              <option value="">Tutti</option>
-              {Object.entries(members).map(([uid, m]) => (
-                <option key={uid} value={uid}>{m.name}{uid === user.uid ? ' (tu)' : ''}</option>
-              ))}
-            </select>
+          {/* Filtri */}
+          <div style={{ padding: '0.75rem 1rem', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+            <div>
+              <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Mese</div>
+              <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+                style={{ width: '100%', padding: '0.4rem 0.5rem', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '0.8rem', background: '#fff', color: 'var(--text)' }}>
+                <option value="">Tutti</option>
+                {MESI.map((m, i) => <option key={i} value={i}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Anno</div>
+              <select value={filterYear} onChange={e => setFilterYear(e.target.value)}
+                style={{ width: '100%', padding: '0.4rem 0.5rem', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '0.8rem', background: '#fff', color: 'var(--text)' }}>
+                <option value="">Tutti</option>
+                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Pagato da</div>
+              <select value={filterPerson} onChange={e => setFilterPerson(e.target.value)}
+                style={{ width: '100%', padding: '0.4rem 0.5rem', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '0.8rem', background: '#fff', color: 'var(--text)' }}>
+                <option value="">Tutti</option>
+                {Object.entries(members).map(([uid, m]) => (
+                  <option key={uid} value={uid}>{uid === user.uid ? 'Tu' : m.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {filteredExpenses.length === 0 && (
