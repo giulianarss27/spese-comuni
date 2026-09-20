@@ -9,7 +9,7 @@ import BottomNav from '../components/BottomNav';
 import CategoryIcon from '../components/CategoryIcon';
 import Spinner from '../components/Spinner';
 import { formatEur, toDate } from '../utils/categories';
-import { getUserBalance } from '../utils/debtCalculator';
+import { calculateDebts } from '../utils/debtCalculator';
 
 function initials(name = '') {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -86,14 +86,16 @@ export default function HomeScreen() {
     return () => unsubs.forEach(u => u());
   }, [sessions]);
 
-  // Calculate global receive/pay totals (exclude future expenses)
+  // Calculate global receive/pay totals using same algorithm as debiti tab
   const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
   const { toReceive, toPay } = Object.entries(expensesBySession).reduce(
     (acc, [sessionId, expenses]) => {
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) return acc;
       const active = expenses.filter(e => toDate(e.date) <= todayEnd);
-      const balance = getUserBalance(active, user.uid);
-      if (balance > 0) acc.toReceive += balance;
-      else acc.toPay += Math.abs(balance);
+      const { debts } = calculateDebts(active, session.members || {});
+      debts.filter(d => d.to === user.uid).forEach(d => { acc.toReceive += d.amount; });
+      debts.filter(d => d.from === user.uid).forEach(d => { acc.toPay += d.amount; });
       return acc;
     },
     { toReceive: 0, toPay: 0 }
@@ -233,7 +235,6 @@ export default function HomeScreen() {
 
         {sessions.map(session => {
           const expenses = expensesBySession[session.id] || [];
-          const balance = getUserBalance(expenses, user.uid);
           const memberCount = Object.keys(session.members || {}).length;
 
           return (
@@ -248,12 +249,6 @@ export default function HomeScreen() {
                 <div className="session-meta">
                   {memberCount} {memberCount === 1 ? 'membro' : 'membri'} · {expenses.length} {expenses.length === 1 ? 'spesa' : 'spese'}
                 </div>
-              </div>
-              <div
-                className="session-balance"
-                style={{ color: balance >= 0 ? 'var(--green)' : 'var(--red)' }}
-              >
-                {balance >= 0 ? '+' : ''}{formatEur(balance)}
               </div>
             </div>
           );

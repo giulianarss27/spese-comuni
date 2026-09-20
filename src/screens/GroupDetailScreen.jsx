@@ -193,13 +193,13 @@ export default function GroupDetailScreen() {
                   <polyline points="18 15 12 9 6 15" />
                 </svg>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', width: '100%', padding: '0 1rem' }}>
+              <div style={{ width: '100%', padding: '0 1rem', maxHeight: '120px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 {Object.entries(members).map(([uid, member]) => {
                   const spent = activeExpenses.filter(e => e.paidBy === uid).reduce((s, e) => s + e.amount, 0);
                   return (
-                    <div key={uid} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                      <span style={{ opacity: 0.85 }}>{uid === user.uid ? 'Tu' : member.name}</span>
-                      <span style={{ fontWeight: 700 }}>{formatEur(spent)}</span>
+                    <div key={uid} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', padding: '0.15rem 0' }}>
+                      <span style={{ opacity: 0.85, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>{uid === user.uid ? 'Tu' : member.name}</span>
+                      <span style={{ fontWeight: 700, flexShrink: 0 }}>{formatEur(spent)}</span>
                     </div>
                   );
                 })}
@@ -262,12 +262,8 @@ export default function GroupDetailScreen() {
             </>
           )}
 
-          <div className="metrics-row">
-            <div className="metric-card">
-              <div className="metric-label">La tua quota</div>
-              <div className="metric-value">{formatEur(myQuota)}</div>
-            </div>
-            <div className="metric-card">
+          <div className="metrics-row" style={{ justifyContent: 'center' }}>
+            <div className="metric-card" style={{ flex: '0 0 auto', minWidth: '140px' }}>
               <div className="metric-label">Il tuo saldo</div>
               <div className={`metric-value ${myBalance >= 0 ? 'green' : 'red'}`}>
                 {myBalance >= 0 ? '+' : ''}{formatEur(myBalance)}
@@ -614,7 +610,7 @@ function DebtRow({ debt, isReceiving, sessionId }) {
                 transition: 'opacity 0.15s',
               }}
             >
-              Registra
+              Salda
             </button>
           </div>
         )}
