@@ -145,8 +145,21 @@ function GlobalDebtRow({ debt, isReceiving }) {
           {formatEur(debt.amount)}
         </div>
         <div className="debt-actions">
-          <button className="btn-small green" onClick={() => setShowModal(true)}>
-            Saldato
+          <button
+            onClick={() => setShowModal(true)}
+            style={{
+              padding: '0.375rem 0.75rem',
+              borderRadius: '999px',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: '1.5px solid var(--primary)',
+              background: 'transparent',
+              color: 'var(--primary)',
+              transition: 'opacity 0.15s',
+            }}
+          >
+            Salda
           </button>
         </div>
       </div>
