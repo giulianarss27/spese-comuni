@@ -54,10 +54,15 @@ export default function HomeScreen() {
     return () => unsubs.forEach(u => u());
   }, [sessions]);
 
-  // Calculate global receive/pay totals
+  // Calculate global receive/pay totals (exclude future expenses)
+  const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
   const { toReceive, toPay } = Object.entries(expensesBySession).reduce(
     (acc, [sessionId, expenses]) => {
-      const balance = getUserBalance(expenses, user.uid);
+      const active = expenses.filter(e => {
+        const d = e.date?.toDate ? e.date.toDate() : new Date(e.date?.seconds * 1000 || e.date);
+        return d <= todayEnd;
+      });
+      const balance = getUserBalance(active, user.uid);
       if (balance > 0) acc.toReceive += balance;
       else acc.toPay += Math.abs(balance);
       return acc;

@@ -313,7 +313,6 @@ export default function GroupDetailScreen() {
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
-<<<<<<< HEAD
 
             {/* Filtro persona */}
             <select
