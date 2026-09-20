@@ -59,6 +59,7 @@ export default function GroupDetailScreen() {
   const [expandedCats, setExpandedCats] = useState({});
   const [showMemberBreakdown, setShowMemberBreakdown] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDebtsBlockModal, setShowDebtsBlockModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
@@ -147,7 +148,7 @@ export default function GroupDetailScreen() {
           </div>
           {session.createdBy === user.uid && (
             <button
-              onClick={() => setShowDeleteModal(true)}
+              onClick={() => debts.length > 0 ? setShowDebtsBlockModal(true) : setShowDeleteModal(true)}
               style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', padding: '0.25rem', cursor: 'pointer' }}
               title="Elimina sessione"
             >
@@ -168,6 +169,43 @@ export default function GroupDetailScreen() {
             onCancel={() => setShowDeleteModal(false)}
             loading={deleting}
           />
+        )}
+
+        {showDebtsBlockModal && (
+          <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 200, padding: '1rem',
+          }}>
+            <div style={{ background: 'var(--bg)', borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '360px' }}>
+              <div style={{ fontWeight: 800, fontSize: '1.05rem', marginBottom: '0.5rem' }}>Debiti in sospeso</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                Salda tutti i debiti prima di eliminare la sessione:
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                {debts.map((debt, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)', borderRadius: '10px', padding: '0.6rem 0.875rem' }}>
+                    <span style={{ fontSize: '0.85rem' }}>
+                      <strong>{debt.fromName}</strong> → <strong>{debt.toName}</strong>
+                    </span>
+                    <span style={{ fontWeight: 700, color: 'var(--red)', fontSize: '0.9rem' }}>{formatEur(debt.amount)}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => { setShowDebtsBlockModal(false); setTab('debiti'); }}
+                style={{ width: '100%', padding: '0.75rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', marginBottom: '0.5rem' }}
+              >
+                Vai ai debiti
+              </button>
+              <button
+                onClick={() => setShowDebtsBlockModal(false)}
+                style={{ width: '100%', padding: '0.75rem', background: 'var(--bg-secondary)', color: 'var(--text)', border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
+              >
+                Annulla
+              </button>
+            </div>
+          </div>
         )}
 
         <div
