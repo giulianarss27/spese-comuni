@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  collection, query, where, onSnapshot, orderBy
+  collection, query, where, onSnapshot, doc, updateDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import BottomNav from '../components/BottomNav';
 import CategoryIcon from '../components/CategoryIcon';
 import Spinner from '../components/Spinner';
-import { formatEur } from '../utils/categories';
+import { formatEur, toDate } from '../utils/categories';
 import { getUserBalance } from '../utils/debtCalculator';
 
 function initials(name = '') {
@@ -21,8 +21,40 @@ export default function HomeScreen() {
   const [sessions, setSessions] = useState([]);
   const [expensesBySession, setExpensesBySession] = useState({});
   const [loading, setLoading] = useState(true);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const profileMenuRef = useRef(null);
 
   const displayName = userProfile?.name || user?.displayName || 'Utente';
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setShowProfileMenu(false);
+        setEditingName(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  async function handleSaveName() {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === displayName) { setEditingName(false); return; }
+    setSavingName(true);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { name: trimmed });
+      setEditingName(false);
+      setShowProfileMenu(false);
+    } catch (e) {
+      console.error('Errore salvataggio nome:', e);
+    } finally {
+      setSavingName(false);
+    }
+  }
 
   // Listen to sessions where user is a member
   useEffect(() => {
@@ -58,10 +90,7 @@ export default function HomeScreen() {
   const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
   const { toReceive, toPay } = Object.entries(expensesBySession).reduce(
     (acc, [sessionId, expenses]) => {
-      const active = expenses.filter(e => {
-        const d = e.date?.toDate ? e.date.toDate() : new Date(e.date?.seconds * 1000 || e.date);
-        return d <= todayEnd;
-      });
+      const active = expenses.filter(e => toDate(e.date) <= todayEnd);
       const balance = getUserBalance(active, user.uid);
       if (balance > 0) acc.toReceive += balance;
       else acc.toPay += Math.abs(balance);
@@ -90,13 +119,72 @@ export default function HomeScreen() {
               <text x="22" y="31" textAnchor="middle" fontSize="14" fontWeight="900" fill="white" fontFamily="system-ui,sans-serif">€</text>
             </svg>
           </div>
-          <button
-            onClick={logout}
-            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            title="Esci"
-          >
-            <div className="avatar">{initials(displayName)}</div>
-          </button>
+          <div style={{ position: 'relative' }} ref={profileMenuRef}>
+            <button
+              onClick={() => { setShowProfileMenu(v => !v); setEditingName(false); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              <div className="avatar">{initials(displayName)}</div>
+            </button>
+
+            {showProfileMenu && (
+              <div style={{
+                position: 'absolute', right: 0, top: 'calc(100% + 8px)',
+                background: 'var(--bg)', borderRadius: '12px',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+                minWidth: '200px', zIndex: 100, overflow: 'hidden',
+                border: '1px solid var(--border)',
+              }}>
+                <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)' }}>{displayName}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>{user.email}</div>
+                </div>
+
+                {!editingName ? (
+                  <button
+                    onClick={() => { setEditingName(true); setNewName(displayName); }}
+                    style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Modifica nome
+                  </button>
+                ) : (
+                  <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>
+                    <input
+                      autoFocus
+                      value={newName}
+                      onChange={e => setNewName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
+                      style={{ width: '100%', padding: '0.4rem 0.5rem', border: '1.5px solid var(--primary)', borderRadius: '8px', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                      <button
+                        onClick={handleSaveName}
+                        disabled={savingName}
+                        style={{ flex: 1, padding: '0.4rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
+                      >
+                        {savingName ? '...' : 'Salva'}
+                      </button>
+                      <button
+                        onClick={() => setEditingName(false)}
+                        style={{ flex: 1, padding: '0.4rem', background: 'var(--bg-secondary)', color: 'var(--text)', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
+                      >
+                        Annulla
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={logout}
+                  style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--red)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  Esci
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
