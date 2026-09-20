@@ -55,10 +55,7 @@ export default function GroupDetailScreen() {
   const [storicoView, setStoricoView] = useState('categoria');
   const [filterMonth, setFilterMonth] = useState('');
   const [filterYear, setFilterYear] = useState('');
-<<<<<<< HEAD
   const [filterPerson, setFilterPerson] = useState('');
-=======
->>>>>>> 4d69a89348426f7c961459615da0e388f2f4bedf
   const [expandedCats, setExpandedCats] = useState({});
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -107,10 +104,7 @@ export default function GroupDetailScreen() {
     const d = toDate(e.date);
     if (filterYear && d.getFullYear() !== Number(filterYear)) return false;
     if (filterMonth !== '' && d.getMonth() !== Number(filterMonth)) return false;
-<<<<<<< HEAD
     if (filterPerson && e.paidBy !== filterPerson && !(e.splitAmong || []).includes(filterPerson)) return false;
-=======
->>>>>>> 4d69a89348426f7c961459615da0e388f2f4bedf
     return true;
   });
 
@@ -332,8 +326,6 @@ export default function GroupDetailScreen() {
                 <option key={uid} value={uid}>{m.name}{uid === user.uid ? ' (tu)' : ''}</option>
               ))}
             </select>
-=======
->>>>>>> 4d69a89348426f7c961459615da0e388f2f4bedf
           </div>
 
           {filteredExpenses.length === 0 && (
