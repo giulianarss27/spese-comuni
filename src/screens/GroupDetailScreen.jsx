@@ -57,6 +57,7 @@ export default function GroupDetailScreen() {
   const [filterYear, setFilterYear] = useState('');
   const [filterPerson, setFilterPerson] = useState('');
   const [expandedCats, setExpandedCats] = useState({});
+  const [showMemberBreakdown, setShowMemberBreakdown] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -169,9 +170,42 @@ export default function GroupDetailScreen() {
           />
         )}
 
-        <div className="group-header-big" style={{ paddingTop: 0 }}>
-          <div className="group-header-amount">{formatEur(total)}</div>
-          <div className="group-header-label">Totale speso</div>
+        <div
+          className="group-header-big"
+          style={{ paddingTop: 0, cursor: 'pointer', userSelect: 'none' }}
+          onClick={() => setShowMemberBreakdown(v => !v)}
+        >
+          {!showMemberBreakdown ? (
+            <>
+              <div className="group-header-amount">{formatEur(total)}</div>
+              <div className="group-header-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
+                Totale speso
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="12" height="12" style={{ opacity: 0.7 }}>
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, opacity: 0.8, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
+                Speso per membro
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="12" height="12" style={{ opacity: 0.7 }}>
+                  <polyline points="18 15 12 9 6 15" />
+                </svg>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', width: '100%', padding: '0 1rem' }}>
+                {Object.entries(members).map(([uid, member]) => {
+                  const spent = activeExpenses.filter(e => e.paidBy === uid).reduce((s, e) => s + e.amount, 0);
+                  return (
+                    <div key={uid} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                      <span style={{ opacity: 0.85 }}>{uid === user.uid ? 'Tu' : member.name}</span>
+                      <span style={{ fontWeight: 700 }}>{formatEur(spent)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="tabs">
@@ -566,8 +600,21 @@ function DebtRow({ debt, isReceiving, sessionId }) {
         </div>
         {isReceiving !== null && (
           <div className="debt-actions">
-            <button className="btn-small green" onClick={() => setShowModal(true)}>
-              Saldato
+            <button
+              onClick={() => setShowModal(true)}
+              style={{
+                padding: '0.375rem 0.75rem',
+                borderRadius: '999px',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: '1.5px solid var(--primary)',
+                background: 'transparent',
+                color: 'var(--primary)',
+                transition: 'opacity 0.15s',
+              }}
+            >
+              Registra
             </button>
           </div>
         )}
