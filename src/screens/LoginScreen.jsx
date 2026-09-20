@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 
 const LogoIcon = () => (
@@ -15,8 +17,24 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  async function handleResetPassword() {
+    if (!email.trim()) { setError('Inserisci la tua email per recuperare la password.'); return; }
+    setResetLoading(true);
+    setError('');
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setResetSent(true);
+    } catch (err) {
+      setError('Errore: controlla che l\'email sia corretta.');
+    } finally {
+      setResetLoading(false);
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -85,6 +103,22 @@ export default function LoginScreen() {
         <button className="btn-primary" type="submit" disabled={loading}>
           {loading ? 'Accesso in corso…' : 'Accedi'}
         </button>
+
+        {resetSent ? (
+          <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--green)', marginTop: '0.25rem' }}>
+            Email inviata! Controlla la casella di posta.
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="btn-link"
+            style={{ fontSize: '0.8rem', opacity: 0.7 }}
+            onClick={handleResetPassword}
+            disabled={resetLoading}
+          >
+            {resetLoading ? 'Invio in corso…' : 'Password dimenticata?'}
+          </button>
+        )}
 
         <button
           type="button"
