@@ -173,22 +173,24 @@ export default function GroupDetailScreen() {
 
         {showDebtsBlockModal && (
           <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 200, padding: '1rem',
           }}>
-            <div style={{ background: 'var(--bg)', borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '360px' }}>
-              <div style={{ fontWeight: 800, fontSize: '1.05rem', marginBottom: '0.5rem' }}>Debiti in sospeso</div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                Salda tutti i debiti prima di eliminare la sessione:
+            <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '360px', color: '#1a1a1a' }}>
+              <div style={{ fontWeight: 800, fontSize: '1.05rem', marginBottom: '0.4rem', color: '#1a1a1a' }}>
+                ⚠️ Debiti in sospeso
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#555', marginBottom: '1rem', lineHeight: 1.4 }}>
+                Non puoi eliminare la sessione finché ci sono debiti aperti. Salda prima:
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
                 {debts.map((debt, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)', borderRadius: '10px', padding: '0.6rem 0.875rem' }}>
-                    <span style={{ fontSize: '0.85rem' }}>
-                      <strong>{debt.fromName}</strong> → <strong>{debt.toName}</strong>
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f5f5f5', borderRadius: '10px', padding: '0.6rem 0.875rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: '#1a1a1a' }}>
+                      <strong>{debt.fromName}</strong><span style={{ color: '#888' }}> → </span><strong>{debt.toName}</strong>
                     </span>
-                    <span style={{ fontWeight: 700, color: 'var(--red)', fontSize: '0.9rem' }}>{formatEur(debt.amount)}</span>
+                    <span style={{ fontWeight: 700, color: '#e53935', fontSize: '0.9rem', flexShrink: 0, marginLeft: '0.5rem' }}>{formatEur(debt.amount)}</span>
                   </div>
                 ))}
               </div>
@@ -200,7 +202,7 @@ export default function GroupDetailScreen() {
               </button>
               <button
                 onClick={() => setShowDebtsBlockModal(false)}
-                style={{ width: '100%', padding: '0.75rem', background: 'var(--bg-secondary)', color: 'var(--text)', border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
+                style={{ width: '100%', padding: '0.75rem', background: '#f0f0f0', color: '#333', border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
               >
                 Annulla
               </button>
