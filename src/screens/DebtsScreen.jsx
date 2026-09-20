@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import BottomNav from '../components/BottomNav';
 import Spinner from '../components/Spinner';
 import ConfirmModal from '../components/ConfirmModal';
-import { formatEur } from '../utils/categories';
+import { formatEur, toDate } from '../utils/categories';
 import { calculateDebts } from '../utils/debtCalculator';
 
 export default function DebtsScreen() {
@@ -32,10 +32,12 @@ export default function DebtsScreen() {
     const unsubs = sessions.map(session => {
       const q = query(collection(db, 'expenses'), where('sessionId', '==', session.id));
       return onSnapshot(q, (snap) => {
+        const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
         expBySession[session.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         const combined = [];
         sessions.forEach(s => {
-          const exps = expBySession[s.id] || [];
+          const allExps = expBySession[s.id] || [];
+          const exps = allExps.filter(e => toDate(e.date) <= todayEnd);
           const { debts } = calculateDebts(exps, s.members || {});
           debts.forEach(d => combined.push({ ...d, sessionId: s.id, sessionName: s.name }));
         });
