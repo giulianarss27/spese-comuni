@@ -148,6 +148,11 @@ export default function GroupDetailScreen() {
     return true;
   });
 
+  // Header: usa le spese filtrate quando si è nello storico con filtri attivi
+  const hasStoricoFilters = tab === 'storico' && (filterMonth !== '' || filterYear !== '' || filterPerson !== '');
+  const headerExpenses = hasStoricoFilters ? filteredExpenses : activeExpenses;
+  const headerTotal = headerExpenses.reduce((s, e) => s + e.amount, 0);
+
   async function handleDeleteSession() {
     setDeleting(true);
     setDeleteError('');
@@ -266,9 +271,9 @@ export default function GroupDetailScreen() {
         >
           {!showMemberBreakdown ? (
             <>
-              <div className="group-header-amount">{formatEur(total)}</div>
+              <div className="group-header-amount">{formatEur(headerTotal)}</div>
               <div className="group-header-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
-                Totale speso
+                {hasStoricoFilters ? 'Totale filtrato' : 'Totale speso'}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="12" height="12" style={{ opacity: 0.7 }}>
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
@@ -277,14 +282,14 @@ export default function GroupDetailScreen() {
           ) : (
             <>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, opacity: 0.8, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
-                Speso per membro
+                {hasStoricoFilters ? 'Speso per membro (filtrato)' : 'Speso per membro'}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="12" height="12" style={{ opacity: 0.7 }}>
                   <polyline points="18 15 12 9 6 15" />
                 </svg>
               </div>
               <div style={{ width: '100%', padding: '0 1rem', maxHeight: '120px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 {Object.entries(members).map(([uid, member]) => {
-                  const spent = activeExpenses.filter(e => e.paidBy === uid).reduce((s, e) => s + e.amount, 0);
+                  const spent = headerExpenses.filter(e => e.paidBy === uid).reduce((s, e) => s + e.amount, 0);
                   return (
                     <div key={uid} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', padding: '0.15rem 0' }}>
                       <span style={{ opacity: 0.85, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>{uid === user.uid ? 'Tu' : member.name}</span>
