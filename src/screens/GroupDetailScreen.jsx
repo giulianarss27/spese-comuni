@@ -87,6 +87,7 @@ export default function GroupDetailScreen() {
   // Storico state
   const [storicoView, setStoricoView] = useState('categoria');
   const [expenseLogs, setExpenseLogs] = useState([]);
+  const [showLogs, setShowLogs] = useState(false);
   const [filterMonth, setFilterMonth] = useState('');
   const [filterYear, setFilterYear] = useState('');
   const [filterPerson, setFilterPerson] = useState('');
@@ -106,7 +107,7 @@ export default function GroupDetailScreen() {
   }, [id]);
 
   useEffect(() => {
-    if (tab !== 'modifiche') return;
+    if (!showLogs) return;
     const q = query(collection(db, 'expense_logs'), where('sessionId', '==', id));
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -118,7 +119,7 @@ export default function GroupDetailScreen() {
       setExpenseLogs(list);
     }, err => console.error('Logs query error:', err));
     return unsub;
-  }, [id, tab]);
+  }, [id, showLogs]);
 
   useEffect(() => {
     // No orderBy to avoid requiring composite index — sort client-side
@@ -195,17 +196,28 @@ export default function GroupDetailScreen() {
           <div style={{ flex: 1 }}>
             <div className="header-title">{session.name}</div>
           </div>
-          {session.createdBy === user.uid && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.1rem' }}>
             <button
-              onClick={() => debts.length > 0 ? setShowDebtsBlockModal(true) : setShowDeleteModal(true)}
+              onClick={() => setShowLogs(true)}
               style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', padding: '0.25rem', cursor: 'pointer' }}
-              title="Elimina sessione"
+              title="Cronologia modifiche"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
-                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
               </svg>
             </button>
-          )}
+            {session.createdBy === user.uid && (
+              <button
+                onClick={() => debts.length > 0 ? setShowDebtsBlockModal(true) : setShowDeleteModal(true)}
+                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', padding: '0.25rem', cursor: 'pointer' }}
+                title="Elimina sessione"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         {showDeleteModal && (
@@ -298,7 +310,7 @@ export default function GroupDetailScreen() {
         </div>
 
         <div className="tabs">
-          {['riepilogo', 'storico', 'debiti', 'modifiche'].map(t => (
+          {['riepilogo', 'storico', 'debiti'].map(t => (
             <button
               key={t}
               className={`tab-btn ${tab === t ? 'active' : ''}`}
@@ -613,16 +625,34 @@ export default function GroupDetailScreen() {
         </div>
       )}
 
-      {/* ── Tab: Modifiche ── */}
-      {tab === 'modifiche' && (
-        <div style={{ paddingBottom: '6rem' }}>
-          {expenseLogs.length === 0 && (
-            <div className="empty-state">
-              <div className="empty-state-icon">📝</div>
-              <div className="empty-state-text">Nessuna modifica registrata.</div>
+      <BottomNav />
+
+      {/* ── Overlay: Cronologia modifiche ── */}
+      {showLogs && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'var(--bg)',
+          zIndex: 150, display: 'flex', flexDirection: 'column', overflowY: 'auto',
+        }}>
+          <header style={{ background: 'var(--primary)', color: '#fff', flexShrink: 0 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.75rem 1rem',
+              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)',
+            }}>
+              <button className="header-back" onClick={() => setShowLogs(false)}>
+                <BackIcon />
+              </button>
+              <div className="header-title">Cronologia modifiche</div>
             </div>
-          )}
-          <div style={{ padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          </header>
+
+          <div style={{ padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingBottom: '2rem' }}>
+            {expenseLogs.length === 0 && (
+              <div className="empty-state">
+                <div className="empty-state-icon">📝</div>
+                <div className="empty-state-text">Nessuna modifica registrata.</div>
+              </div>
+            )}
             {expenseLogs.map(log => {
               const isMe = log.byUid === user.uid;
               const name = isMe ? 'Tu' : log.byName;
@@ -646,8 +676,6 @@ export default function GroupDetailScreen() {
           </div>
         </div>
       )}
-
-      <BottomNav />
     </div>
   );
 }
