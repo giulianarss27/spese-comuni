@@ -31,30 +31,25 @@ const ChevronDown = ({ open }) => (
 
 const MESI = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
 
-function formatChangeText(log, currentUid, members) {
-  const isMe = log.byUid === currentUid;
-  const verb = isMe ? 'Hai' : 'Ha';
-  if (log.type === 'add') return isMe ? `Hai aggiunto "${log.expenseDescription}"` : `Ha aggiunto "${log.expenseDescription}"`;
-  if (log.type === 'delete') return isMe ? `Hai rimosso "${log.expenseDescription}"` : `Ha rimosso "${log.expenseDescription}"`;
-  if (log.type === 'edit') {
-    const field = log.field;
-    const from = log.from;
-    const to = log.to;
-    if (field === 'amount') {
-      return `${verb} modificato l'importo di "${log.expenseDescription}" da ${formatEur(from)} a ${formatEur(to)}`;
-    }
-    if (field === 'description') {
-      return `${verb} rinominato "${from}" in "${to}"`;
-    }
-    if (field === 'splitAmong') {
-      const resolveName = uid => uid === currentUid ? 'Tu' : (members[uid]?.name || uid);
-      const fromNames = (from || []).map(resolveName).join(', ');
-      const toNames = (to || []).map(resolveName).join(', ');
-      return `${verb} modificato la divisione di "${log.expenseDescription}": ${fromNames} → ${toNames}`;
-    }
-    return `${verb} modificato "${log.expenseDescription}"`;
+function getLogBadge(log) {
+  if (log.type === 'add') return { symbol: '+', bg: 'var(--green-bg)', color: 'var(--green)' };
+  if (log.type === 'delete') return { symbol: '−', bg: 'var(--red-bg)', color: 'var(--red)' };
+  return { symbol: '✎', bg: '#EEEDFD', color: 'var(--primary)' };
+}
+
+function getChangeDetail(log, currentUid, members) {
+  if (log.type !== 'edit') return null;
+  if (log.field === 'amount') {
+    return `${formatEur(log.from)} → ${formatEur(log.to)}`;
   }
-  return isMe ? 'Hai fatto una modifica' : 'Ha fatto una modifica';
+  if (log.field === 'description') {
+    return `"${log.from}" → "${log.to}"`;
+  }
+  if (log.field === 'splitAmong') {
+    const name = uid => uid === currentUid ? 'Tu' : (members[uid]?.name || uid);
+    return (log.from || []).map(name).join(' + ') + ' → ' + (log.to || []).map(name).join(' + ');
+  }
+  return null;
 }
 
 function groupByDate(expenses) {
@@ -647,7 +642,6 @@ export default function GroupDetailScreen() {
               </div>
             )}
             {expenseLogs.flatMap(log => {
-              // Vecchio formato: changes era un array nello stesso documento
               if (log.type === 'edit' && Array.isArray(log.changes) && log.changes.length > 0 && log.field === undefined) {
                 return log.changes.map((c, i) => ({ ...log, id: `${log.id}-${i}`, field: c.field, from: c.from, to: c.to }));
               }
@@ -657,19 +651,31 @@ export default function GroupDetailScreen() {
               const name = isMe ? 'Tu' : log.byName;
               const ts = log.timestamp?.toDate?.();
               const timeStr = ts
-                ? ts.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) + ' · ' + ts.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+                ? ts.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) + ' · ' + ts.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
                 : null;
+              const badge = getLogBadge(log);
+              const detail = getChangeDetail(log, user.uid, members);
               return (
-                <div key={log.id} className="card" style={{ padding: '0.875rem 1rem' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{name}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem', lineHeight: 1.4 }}>
-                    {formatChangeText(log, user.uid, members)}
+                <div key={log.id} className="card" style={{ padding: '0.75rem 1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0,
+                      background: badge.bg, color: badge.color, fontSize: '0.8rem', fontWeight: 700,
+                    }}>{badge.symbol}</span>
+                    <span style={{ fontWeight: 600, fontSize: '0.85rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {log.expenseDescription}
+                    </span>
+                    {timeStr && (
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', flexShrink: 0 }}>{timeStr}</span>
+                    )}
                   </div>
-                  {timeStr && (
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem', opacity: 0.7 }}>
-                      {timeStr}
-                    </div>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingLeft: '1.875rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--primary)' }}>{name}</span>
+                    {detail && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{detail}</span>
+                    )}
+                  </div>
                 </div>
               );
             })}
