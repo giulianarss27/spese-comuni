@@ -31,6 +31,39 @@ const ChevronDown = ({ open }) => (
 
 const MESI = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
 
+function formatLogAction(log, currentUid) {
+  const isMe = log.byUid === currentUid;
+  if (log.type === 'add') {
+    return isMe
+      ? `Hai aggiunto "${log.expenseDescription}"`
+      : `Ha aggiunto "${log.expenseDescription}"`;
+  }
+  if (log.type === 'delete') {
+    return isMe
+      ? `Hai rimosso "${log.expenseDescription}"`
+      : `Ha rimosso "${log.expenseDescription}"`;
+  }
+  if (log.type === 'edit') {
+    const parts = (log.changes || []).map(c => {
+      if (c.field === 'amount') {
+        return `importo da ${formatEur(c.from)} a ${formatEur(c.to)}`;
+      }
+      if (c.field === 'description') {
+        return `nome da "${c.from}" a "${c.to}"`;
+      }
+      return null;
+    }).filter(Boolean);
+    if (parts.length === 0) {
+      return isMe
+        ? `Hai modificato "${log.expenseDescription}"`
+        : `Ha modificato "${log.expenseDescription}"`;
+    }
+    const verb = isMe ? 'Hai modificato' : 'Ha modificato';
+    return `${verb} ${parts.join(' e ')} su "${log.expenseDescription}"`;
+  }
+  return isMe ? 'Hai fatto una modifica' : 'Ha fatto una modifica';
+}
+
 function groupByDate(expenses) {
   const groups = {};
   expenses.forEach(e => {
@@ -53,6 +86,7 @@ export default function GroupDetailScreen() {
 
   // Storico state
   const [storicoView, setStoricoView] = useState('categoria');
+  const [expenseLogs, setExpenseLogs] = useState([]);
   const [filterMonth, setFilterMonth] = useState('');
   const [filterYear, setFilterYear] = useState('');
   const [filterPerson, setFilterPerson] = useState('');
@@ -70,6 +104,21 @@ export default function GroupDetailScreen() {
     }, () => setLoading(false));
     return unsub;
   }, [id]);
+
+  useEffect(() => {
+    if (tab !== 'modifiche') return;
+    const q = query(collection(db, 'expense_logs'), where('sessionId', '==', id));
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => {
+        const ta = a.timestamp?.toDate?.() || new Date(0);
+        const tb = b.timestamp?.toDate?.() || new Date(0);
+        return tb - ta;
+      });
+      setExpenseLogs(list);
+    }, err => console.error('Logs query error:', err));
+    return unsub;
+  }, [id, tab]);
 
   useEffect(() => {
     // No orderBy to avoid requiring composite index — sort client-side
@@ -249,7 +298,7 @@ export default function GroupDetailScreen() {
         </div>
 
         <div className="tabs">
-          {['riepilogo', 'storico', 'debiti'].map(t => (
+          {['riepilogo', 'storico', 'debiti', 'modifiche'].map(t => (
             <button
               key={t}
               className={`tab-btn ${tab === t ? 'active' : ''}`}
@@ -561,6 +610,40 @@ export default function GroupDetailScreen() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* ── Tab: Modifiche ── */}
+      {tab === 'modifiche' && (
+        <div style={{ paddingBottom: '6rem' }}>
+          {expenseLogs.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-state-icon">📝</div>
+              <div className="empty-state-text">Nessuna modifica registrata.</div>
+            </div>
+          )}
+          <div style={{ padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {expenseLogs.map(log => {
+              const isMe = log.byUid === user.uid;
+              const name = isMe ? 'Tu' : log.byName;
+              const ts = log.timestamp?.toDate?.();
+              return (
+                <div key={log.id} className="card" style={{ padding: '0.875rem 1rem' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{name}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem', lineHeight: 1.4 }}>
+                    {formatLogAction(log, user.uid)}
+                  </div>
+                  {ts && (
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem', opacity: 0.7 }}>
+                      {ts.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {' · '}
+                      {ts.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

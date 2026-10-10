@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  doc, getDoc, updateDoc, deleteDoc,
-  collection, query, where, onSnapshot, Timestamp
+  doc, getDoc, updateDoc, deleteDoc, addDoc,
+  collection, query, where, onSnapshot, Timestamp, serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
@@ -46,6 +46,7 @@ export default function EditExpenseScreen() {
   const [members, setMembers] = useState({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [origData, setOrigData] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -60,6 +61,7 @@ export default function EditExpenseScreen() {
       setDateISO(toISO(d.date));
       setPaidBy(d.paidBy || user.uid);
       setSplitAmong(d.splitAmong || []);
+      setOrigData({ amount: d.amount, description: d.description || '' });
       setLoadingExpense(false);
     }).catch(() => navigate('/'));
   }, [expenseId]);
@@ -93,8 +95,9 @@ export default function EditExpenseScreen() {
     setSaving(true);
     try {
       const paidByName = members[paidBy]?.name || userProfile?.name || 'Sconosciuto';
+      const newDesc = description.trim() || CATEGORIES[category]?.label || 'Spesa';
       await updateDoc(doc(db, 'expenses', expenseId), {
-        description: description.trim() || CATEGORIES[category]?.label || 'Spesa',
+        description: newDesc,
         amount: amtNum,
         category,
         paidBy,
@@ -102,6 +105,30 @@ export default function EditExpenseScreen() {
         splitAmong,
         date: expenseDate,
       });
+      if (origData) {
+        const changes = [];
+        if (Math.abs(origData.amount - amtNum) > 0.001) {
+          changes.push({ field: 'amount', from: origData.amount, to: amtNum });
+        }
+        if (origData.description !== newDesc) {
+          changes.push({ field: 'description', from: origData.description, to: newDesc });
+        }
+        if (changes.length > 0) {
+          try {
+            await addDoc(collection(db, 'expense_logs'), {
+              sessionId,
+              type: 'edit',
+              byUid: user.uid,
+              byName: members[user.uid]?.name || userProfile?.name || 'Sconosciuto',
+              expenseDescription: newDesc,
+              changes,
+              timestamp: serverTimestamp(),
+            });
+          } catch (logErr) {
+            console.warn('Log write failed:', logErr);
+          }
+        }
+      }
       navigate(`/group/${sessionId}`);
     } catch (e) {
       setError('Errore: ' + (e?.message || 'Riprova.'));
@@ -113,7 +140,21 @@ export default function EditExpenseScreen() {
   async function handleDelete() {
     setDeleting(true);
     try {
+      const descToLog = description || 'Spesa';
       await deleteDoc(doc(db, 'expenses', expenseId));
+      try {
+        await addDoc(collection(db, 'expense_logs'), {
+          sessionId,
+          type: 'delete',
+          byUid: user.uid,
+          byName: members[user.uid]?.name || userProfile?.name || 'Sconosciuto',
+          expenseDescription: descToLog,
+          changes: [],
+          timestamp: serverTimestamp(),
+        });
+      } catch (logErr) {
+        console.warn('Log write failed:', logErr);
+      }
       navigate(`/group/${sessionId}`);
     } catch (e) {
       setError('Errore eliminazione: ' + (e?.message || 'Riprova.'));

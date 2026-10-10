@@ -94,9 +94,10 @@ export default function AddExpenseScreen() {
     setSaving(true);
     try {
       const paidByName = members[paidBy]?.name || userProfile?.name || 'Sconosciuto';
+      const expenseDescription = description.trim() || CATEGORIES[category]?.label || 'Spesa';
       await addDoc(collection(db, 'expenses'), {
         sessionId,
-        description: description.trim() || CATEGORIES[category]?.label || 'Spesa',
+        description: expenseDescription,
         amount: amtNum,
         category,
         paidBy,
@@ -105,6 +106,19 @@ export default function AddExpenseScreen() {
         date: expenseDate,
         createdAt: serverTimestamp()
       });
+      try {
+        await addDoc(collection(db, 'expense_logs'), {
+          sessionId,
+          type: 'add',
+          byUid: user.uid,
+          byName: members[user.uid]?.name || userProfile?.name || 'Sconosciuto',
+          expenseDescription,
+          changes: [],
+          timestamp: serverTimestamp(),
+        });
+      } catch (logErr) {
+        console.warn('Log write failed:', logErr);
+      }
       navigate(preselectedSession ? `/group/${sessionId}` : '/');
     } catch (e) {
       console.error('Errore salvataggio spesa:', e);
