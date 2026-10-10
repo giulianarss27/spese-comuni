@@ -31,37 +31,27 @@ const ChevronDown = ({ open }) => (
 
 const MESI = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
 
-function formatLogAction(log, currentUid) {
+function formatChangeText(log, change, currentUid, members) {
   const isMe = log.byUid === currentUid;
-  if (log.type === 'add') {
-    return isMe
-      ? `Hai aggiunto "${log.expenseDescription}"`
-      : `Ha aggiunto "${log.expenseDescription}"`;
+  const verb = isMe ? 'Hai' : 'Ha';
+  if (!change) {
+    if (log.type === 'add') return isMe ? `Hai aggiunto "${log.expenseDescription}"` : `Ha aggiunto "${log.expenseDescription}"`;
+    if (log.type === 'delete') return isMe ? `Hai rimosso "${log.expenseDescription}"` : `Ha rimosso "${log.expenseDescription}"`;
+    return isMe ? 'Hai fatto una modifica' : 'Ha fatto una modifica';
   }
-  if (log.type === 'delete') {
-    return isMe
-      ? `Hai rimosso "${log.expenseDescription}"`
-      : `Ha rimosso "${log.expenseDescription}"`;
+  if (change.field === 'amount') {
+    return `${verb} modificato l'importo di "${log.expenseDescription}" da ${formatEur(change.from)} a ${formatEur(change.to)}`;
   }
-  if (log.type === 'edit') {
-    const parts = (log.changes || []).map(c => {
-      if (c.field === 'amount') {
-        return `importo da ${formatEur(c.from)} a ${formatEur(c.to)}`;
-      }
-      if (c.field === 'description') {
-        return `nome da "${c.from}" a "${c.to}"`;
-      }
-      return null;
-    }).filter(Boolean);
-    if (parts.length === 0) {
-      return isMe
-        ? `Hai modificato "${log.expenseDescription}"`
-        : `Ha modificato "${log.expenseDescription}"`;
-    }
-    const verb = isMe ? 'Hai modificato' : 'Ha modificato';
-    return `${verb} ${parts.join(' e ')} su "${log.expenseDescription}"`;
+  if (change.field === 'description') {
+    return `${verb} rinominato "${change.from}" in "${change.to}"`;
   }
-  return isMe ? 'Hai fatto una modifica' : 'Ha fatto una modifica';
+  if (change.field === 'splitAmong') {
+    const resolveName = uid => uid === currentUid ? 'Tu' : (members[uid]?.name || uid);
+    const fromNames = (change.from || []).map(resolveName).join(', ');
+    const toNames = (change.to || []).map(resolveName).join(', ');
+    return `${verb} modificato la divisione di "${log.expenseDescription}": ${fromNames} → ${toNames}`;
+  }
+  return `${verb} modificato "${log.expenseDescription}"`;
 }
 
 function groupByDate(expenses) {
@@ -653,25 +643,33 @@ export default function GroupDetailScreen() {
                 <div className="empty-state-text">Nessuna modifica registrata.</div>
               </div>
             )}
-            {expenseLogs.map(log => {
+            {expenseLogs.flatMap(log => {
               const isMe = log.byUid === user.uid;
               const name = isMe ? 'Tu' : log.byName;
               const ts = log.timestamp?.toDate?.();
-              return (
-                <div key={log.id} className="card" style={{ padding: '0.875rem 1rem' }}>
+              const timeStr = ts ? (
+                ts.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })
+                + ' · ' +
+                ts.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+              ) : null;
+
+              const rows = log.type === 'edit' && log.changes?.length > 0
+                ? log.changes.map((change, i) => ({ key: `${log.id}-${i}`, change }))
+                : [{ key: log.id, change: null }];
+
+              return rows.map(({ key, change }) => (
+                <div key={key} className="card" style={{ padding: '0.875rem 1rem' }}>
                   <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{name}</div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem', lineHeight: 1.4 }}>
-                    {formatLogAction(log, user.uid)}
+                    {formatChangeText(log, change, user.uid, members)}
                   </div>
-                  {ts && (
+                  {timeStr && (
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem', opacity: 0.7 }}>
-                      {ts.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      {' · '}
-                      {ts.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                      {timeStr}
                     </div>
                   )}
                 </div>
-              );
+              ));
             })}
           </div>
         </div>

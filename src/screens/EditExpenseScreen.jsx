@@ -61,7 +61,7 @@ export default function EditExpenseScreen() {
       setDateISO(toISO(d.date));
       setPaidBy(d.paidBy || user.uid);
       setSplitAmong(d.splitAmong || []);
-      setOrigData({ amount: d.amount, description: d.description || '' });
+      setOrigData({ amount: d.amount, description: d.description || '', splitAmong: d.splitAmong || [] });
       setLoadingExpense(false);
     }).catch(() => navigate('/'));
   }, [expenseId]);
@@ -112,6 +112,11 @@ export default function EditExpenseScreen() {
         }
         if (origData.description !== newDesc) {
           changes.push({ field: 'description', from: origData.description, to: newDesc });
+        }
+        const origSplit = [...(origData.splitAmong || [])].sort();
+        const newSplit = [...splitAmong].sort();
+        if (origSplit.join(',') !== newSplit.join(',')) {
+          changes.push({ field: 'splitAmong', from: origData.splitAmong || [], to: splitAmong });
         }
         if (changes.length > 0) {
           try {
