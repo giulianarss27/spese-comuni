@@ -118,7 +118,7 @@ export default function EditExpenseScreen() {
         if (origSplit.join(',') !== newSplit.join(',')) {
           changes.push({ field: 'splitAmong', from: origData.splitAmong || [], to: splitAmong });
         }
-        if (changes.length > 0) {
+        for (const change of changes) {
           try {
             await addDoc(collection(db, 'expense_logs'), {
               sessionId,
@@ -126,7 +126,9 @@ export default function EditExpenseScreen() {
               byUid: user.uid,
               byName: members[user.uid]?.name || userProfile?.name || 'Sconosciuto',
               expenseDescription: newDesc,
-              changes,
+              field: change.field,
+              from: change.from,
+              to: change.to,
               timestamp: serverTimestamp(),
             });
           } catch (logErr) {
